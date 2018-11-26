@@ -1,0 +1,12 @@
+# Path to an uncompressed FASTA file with all transcript sequences.
+dna: /MaizeShen/liupeng/Test/Data/Ref/ref_dna.fa
+gtf: /MaizeShen/liupeng/Test/Data/Ref/zma_chr.gtf
+GenomeHisat2Index: /MaizeShen/liupeng/Test/Data/Ref/ref_dna.fa
+# GenomeSTARIndex: /MaizeShen/liupeng/Test/Data/Ref/ref_dna.fa
+
+
+# Path to a folder where intermediate files will be written.
+WorkDir: /MaizeShen/liupeng/Project/GWAS/Result
+
+# Path to a YAML file with samples and their corresponding FASTQ files.
+SampleYaml: /MaizeShen/liupeng/Project/GWAS/sample.yaml
