@@ -190,4 +190,142 @@ rule StarPass2:
               "--sjdbGTFfile {GTF} --outBAMsortingThreadN {threads} "
               "--sjdbFileChrStartEnd {input.tab} --readFilesIn {input.R1} {input.R2} 2>{log} "
             )
-            
+
+## ======= Step 3Add read groups, sort, mark duplicates, and create index ========
+## ======== Step 3.1 AddOrReplaceReadGroups ========
+rule AddOrReplaceReadGroups:
+    input:
+        bam = WORKDIR + "Step2.StarAlign/star-2-pass/{sample}Aligned.sortedByCoord.out.bam"
+    output:
+        temp(WORKDIR + "Step3.Picard/{sample}.add_rg_sort.bam")
+    log:
+        WORKDIR + "logs/Step3.Picard/{sample}.add_rg.log"
+    benchmark:
+        WORKDIR + "benchmark/Step3.Picard/{sample}.benchmark"
+    params:
+        rg = "SO=coordinate RGID={sample} RGLB=lib RGPL=illumina RGPU=hiseq RGSM={sample}"
+    shell:
+        "picard AddOrReplaceReadGroups I={input} O={output} {params.rg}"
+
+## ======== Step 3.2 MarkDuplicates ========
+rule MarkDuplicates:
+    input:
+        WORKDIR + "Step3.Picard/{sample}.add_rg_sort.bam"
+    output:
+        bam = WORKDIR + "Step3.Picard/{sample}.rmdup.bam",
+        mtx = WORKDIR + "Step3.Picard/{sample}.rmdup.mtx"
+    log:
+        WORKDIR + "logs/Step3.Picard/{sample}.rmdup.log"
+    params:
+        "ASSUME_SORTED=TRUE VALIDATION_STRINGENCY=SILENT REMOVE_DUPLICATES=true"
+    shell:
+        "picard MarkDuplicates {params} INPUT={input} OUTPUT={output.bam} METRICS_FILE={output.mtx}"
+
+
+## ======== Step 4.1 Split'N'Trim and reassign mapping qualities ========
+rule SplitNCigarReads:
+    input:
+        bam = WORKDIR + "Step3.Picard/{sample}.rmdup.bam"
+    output:
+        bam = WORKDIR + "Step4.GATK/{sample}.split.bam"
+    log:
+        WORKDIR + "logs/Step4.GATK/{sample}.SplitNCigarReads.log"
+    resources:
+        mem_mb=5000
+    params:
+        java = '--java-options "-Xmx5G"'
+    run:
+        shell( "gatk {params.java} SplitNCigarReads -I {input.bam} -R {DNA} -O {output.bam}")
+
+
+## ======== Step 4.2 BaseRecalibrator ========
+rule BaseRecalibrator1:
+    input:
+        bam = WORKDIR + WORKDIR + "Step4.GATK/{sample}.split.bam"
+    output:
+        before = WORKDIR + "Step4.GATK/{sample}/{sample}.BeforeRecal.tab"
+    log:
+        WORKDIR + "logs/Step4.GATK/{sample}.BaseRecalibrator1.log"
+    resources:
+        mem_mb=5000
+    params:
+        java = '--java-options "-Xmx5G"',
+        opt = "--use-original-qualities"
+    run:
+        shell("gatk {params.java} BaseRecalibrator -I {input.bam} -R {DNA} {params.opt} --known-sites {VCF} -O {output.before}")
+
+
+## ======== Step 4.3 ApplyBQSR ========
+rule ApplyBQSR:
+    input:
+        bam = WORKDIR + "Step4.GATK/{sample}.split.bam"，
+        tab = WORKDIR + "Step4.GATK/{sample}/{sample}.BeforeRecal.tab"
+    output:
+        WORKDIR + "Step4.GATK/{sample}/{sample}.BQSR.bam"
+    log:
+        WORKDIR + "logs/Step4.GATK/{sample}.BQSR.log"
+    resources:
+        mem_mb=5000
+    threads:
+        4
+    params:
+        java = '--java-options "-Xmx5G"',
+        opt = "--use-original-qualities"
+    run:
+        shell("gatk {params.java} ApplyBQSR {params.opt} --bqsr-recal-file {input.tab} -R {DNA} -I {input.bam} -O {output}")
+
+
+## ======== Step 4.4 BaseRecalibrator twice ========
+rule BaseRecalibrator2:
+    input:
+        bam = WORKDIR + "Step4.GATK/{sample}/{sample}.BQSR.bam"
+    output:
+        after = WORKDIR + "Step4.GATK/{sample}/{sample}.AfterRecal.tab"
+    log:
+        WORKDIR + "logs/Step4.GATK/{sample}.BaseRecalibrator2.log"
+    resources:
+        mem_mb=5000
+    threads:
+        4
+    params:
+        java = '--java-options "-Xmx5G"',
+        opt = "--use-original-qualities"
+    run:
+        shell("gatk {params.java} BaseRecalibrator -R {DNA} -I {input.bam} --known-sites {VCF} {params.opt} -O {output.after}")
+
+## ======== Step 4.5 AnalyzeCovariates ========
+rule AnalyzeCovariates:
+    input:
+        before = WORKDIR + "Step4.GATK/{sample}/{sample}.BeforeRecal.tab",
+        after = WORKDIR + "Step4.GATK/{sample}/{sample}.AfterRecal.tab"
+    output:
+        pdf = WORKDIR + "Step4.GATK/{sample}/{sample}.Recal_Plot.pdf"
+    log:
+        WORKDIR + "logs/Step4.GATK/{sample}.AnalyzeCovariates.log"
+    resources:
+        mem_mb=5000
+    threads:
+        4
+    params:
+        java = '--java-options "-Xmx5G"'
+    shell:
+        "gatk {params.java} AnalyzeCovariates --before-report-file {input.before} --after-report-file {input.after} --plots-report-file {output.pdf}"
+
+
+## ======== Step 4.6 GATK HaplotypeCaller ========
+rule HaplotypeCaller:
+    input:
+        bam = WORKDIR + "Step4.GATK/{sample}/{sample}.BQSR.bam"
+    output:
+        vcf = WORKDIR + "Step4.GATK/{sample}/{sample}.g.vcf.gz"
+    log:
+        WORKDIR + "logs/Step4.GATK/{sample}.g.vcf.log"
+    resources:
+        mem_mb=10000
+    threads:
+        4
+    params:
+        java = '--java-options "-Xmx10G"',
+        opt = "--emit-ref-confidence GVCF"
+    run:
+        shell("gatk {params.java} HaplotypeCaller {params.opt} -R {DNA} -I {input.bam} -O {output.vcf}")
