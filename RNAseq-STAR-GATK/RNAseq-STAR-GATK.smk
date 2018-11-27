@@ -25,6 +25,14 @@ rule all:
         WORKDIR + "Step2.StarAlign/star-2-index/sjdbList.out.tab",
         expand(WORKDIR + "Step2.StarAlign/star-2-pass/{sample}SJ.out.tab", sample=SAMPLES),
         expand(WORKDIR + "Step2.StarAlign/star-2-pass/{sample}Aligned.sortedByCoord.out.bam", sample=SAMPLES)
+        expand(WORKDIR + "Step3.Picard/{sample}.rmdup.mtx", sample=SAMPLES),
+        expand(WORKDIR + "Step4.GATK/{sample}.split.bam", sample=SAMPLES),
+        expand(WORKDIR + "Step4.GATK/{sample}.BeforeRecal.tab", sample=SAMPLES),
+        expand(WORKDIR + "Step4.GATK/{sample}.Recal_Plot.pdf", sample=SAMPLES),
+        expand(WORKDIR + "Step4.GATK/{sample}.g.vcf.gz", sample=SAMPLES)
+
+
+
 
 
 ## ======== Step 0  Prepare Rename the fastq file ======== 
@@ -243,7 +251,7 @@ rule BaseRecalibrator1:
     input:
         bam = WORKDIR + WORKDIR + "Step4.GATK/{sample}.split.bam"
     output:
-        before = WORKDIR + "Step4.GATK/{sample}/{sample}.BeforeRecal.tab"
+        before = WORKDIR + "Step4.GATK/{sample}.BeforeRecal.tab"
     log:
         WORKDIR + "logs/Step4.GATK/{sample}.BaseRecalibrator1.log"
     resources:
@@ -259,9 +267,9 @@ rule BaseRecalibrator1:
 rule ApplyBQSR:
     input:
         bam = WORKDIR + "Step4.GATK/{sample}.split.bam"，
-        tab = WORKDIR + "Step4.GATK/{sample}/{sample}.BeforeRecal.tab"
+        tab = WORKDIR + "Step4.GATK/{sample}.BeforeRecal.tab"
     output:
-        WORKDIR + "Step4.GATK/{sample}/{sample}.BQSR.bam"
+        WORKDIR + "Step4.GATK/{sample}.BQSR.bam"
     log:
         WORKDIR + "logs/Step4.GATK/{sample}.BQSR.log"
     resources:
@@ -278,9 +286,9 @@ rule ApplyBQSR:
 ## ======== Step 4.4 BaseRecalibrator twice ========
 rule BaseRecalibrator2:
     input:
-        bam = WORKDIR + "Step4.GATK/{sample}/{sample}.BQSR.bam"
+        bam = WORKDIR + "Step4.GATK/{sample}.BQSR.bam"
     output:
-        after = WORKDIR + "Step4.GATK/{sample}/{sample}.AfterRecal.tab"
+        after = WORKDIR + "Step4.GATK/{sample}.AfterRecal.tab"
     log:
         WORKDIR + "logs/Step4.GATK/{sample}.BaseRecalibrator2.log"
     resources:
@@ -296,10 +304,10 @@ rule BaseRecalibrator2:
 ## ======== Step 4.5 AnalyzeCovariates ========
 rule AnalyzeCovariates:
     input:
-        before = WORKDIR + "Step4.GATK/{sample}/{sample}.BeforeRecal.tab",
-        after = WORKDIR + "Step4.GATK/{sample}/{sample}.AfterRecal.tab"
+        before = WORKDIR + "Step4.GATK/{sample}.BeforeRecal.tab",
+        after = WORKDIR + "Step4.GATK/{sample}.AfterRecal.tab"
     output:
-        pdf = WORKDIR + "Step4.GATK/{sample}/{sample}.Recal_Plot.pdf"
+        pdf = WORKDIR + "Step4.GATK/{sample}.Recal_Plot.pdf"
     log:
         WORKDIR + "logs/Step4.GATK/{sample}.AnalyzeCovariates.log"
     resources:
@@ -315,9 +323,9 @@ rule AnalyzeCovariates:
 ## ======== Step 4.6 GATK HaplotypeCaller ========
 rule HaplotypeCaller:
     input:
-        bam = WORKDIR + "Step4.GATK/{sample}/{sample}.BQSR.bam"
+        bam = WORKDIR + "Step4.GATK/{sample}.BQSR.bam"
     output:
-        vcf = WORKDIR + "Step4.GATK/{sample}/{sample}.g.vcf.gz"
+        vcf = WORKDIR + "Step4.GATK/{sample}.g.vcf.gz"
     log:
         WORKDIR + "logs/Step4.GATK/{sample}.g.vcf.log"
     resources:
