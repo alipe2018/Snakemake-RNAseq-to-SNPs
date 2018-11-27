@@ -249,7 +249,7 @@ rule SplitNCigarReads:
 ## ======== Step 4.2 BaseRecalibrator ========
 rule BaseRecalibrator1:
     input:
-        bam = WORKDIR + WORKDIR + "Step4.GATK/{sample}.split.bam"
+        bam = WORKDIR + "Step4.GATK/{sample}.split.bam"
     output:
         before = WORKDIR + "Step4.GATK/{sample}.BeforeRecal.tab"
     log:
@@ -266,7 +266,7 @@ rule BaseRecalibrator1:
 ## ======== Step 4.3 ApplyBQSR ========
 rule ApplyBQSR:
     input:
-        bam = WORKDIR + "Step4.GATK/{sample}.split.bam"，
+        bam = WORKDIR + "Step4.GATK/{sample}.split.bam",
         tab = WORKDIR + "Step4.GATK/{sample}.BeforeRecal.tab"
     output:
         WORKDIR + "Step4.GATK/{sample}.BQSR.bam"
