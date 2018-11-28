@@ -170,7 +170,8 @@ rule StarPass2:
     input:
         R1 = WORKDIR + "Step1.FastqFilter/{sample}.R1.fq.gz",
         R2 = WORKDIR + "Step1.FastqFilter/{sample}.R2.fq.gz",
-        tab = WORKDIR + "Step2.StarAlign/SJ.Pass-1-Merged.tab"
+        tab = WORKDIR + "Step2.StarAlign/SJ.Pass-1-Merged.tab",
+        tab2 = WORKDIR + "Step2.StarAlign/star-2-index/sjdbList.out.tab" ## 需要依赖关系
     output:
         bam = WORKDIR + "Step2.StarAlign/star-2-pass/{sample}Aligned.sortedByCoord.out.bam",
         sjs = WORKDIR + "Step2.StarAlign/star-2-pass/{sample}SJ.out.tab"
