@@ -67,9 +67,9 @@ rule FastqFilter:
     threads:
         8
     run:
-        shell("/MaizeShen/liupeng/Test/soft/fastp {params} -w {threads} "
-              "-i {input.R1} -I {input.R2} -o {output.R1} -O {output.R2} "
-              "-j {output.json} -h {output.html} 2> {log}"
+        shell(
+              "fastp {params} -w {threads} -i {input.R1} -I {input.R2} "
+              "-o {output.R1} -O {output.R2} -j {output.json} -h {output.html} 2> {log}"
             )
 
 ##======== Step 2.1 Build STAR 1-Index ========

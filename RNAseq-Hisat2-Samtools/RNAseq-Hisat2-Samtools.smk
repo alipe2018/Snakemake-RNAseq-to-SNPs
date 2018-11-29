@@ -18,13 +18,6 @@ GTF = config["gtf"]
 ##======== Rules ============
 rule all:
     input:
-#       expand( WORKDIR + "Step0.Prepare/{sample}.R1.fq.gz", sample=SAMPLES ),
-#       expand( WORKDIR + "Step0.Prepare/{sample}.R2.fq.gz", sample=SAMPLES ),
-#       expand( WORKDIR + "Step1.fastqFilter/{sample}/{sample}.R1.fq.gz", sample=SAMPLES ),
-#       expand( WORKDIR + "Step1.fastqFilter/{sample}/{sample}.R2.fq.gz", sample=SAMPLES ),
-#       expand( WORKDIR + "Step1.fastqFilter/{sample}/{sample}.json", sample=SAMPLES ),
-#       expand( WORKDIR + "Step1.fastqFilter/{sample}/{sample}.html", sample=SAMPLES ),
-#       expand( WORKDIR + "Step2.hisat2Align/{sample}.bam", sample=SAMPLES),
         expand( WORKDIR + "Step2.hisat2Align/{sample}.xls", sample=SAMPLES),
         expand( WORKDIR + "Step2.sorted/{sample}.sorted.bam", sample=SAMPLES),
         expand( WORKDIR + "Step2.sorted/{sample}.sorted.bam.bai", sample=SAMPLES),
@@ -65,8 +58,10 @@ rule FastqFilter:
     threads:
         8
     run:
-        shell("/MaizeShen/liupeng/Test/soft/fastp {params} -w {threads} -i {input.R1} -I {input.R2} -o {output.R1} "
-        "-O {output.R2} -j {output.json} -h {output.html} 2> {log}")
+        shell(
+            "fastp {params} -w {threads} -i {input.R1} -I {input.R2} -o {output.R1} "
+            "-O {output.R2} -j {output.json} -h {output.html} 2> {log}"
+            )
 
 
 ## ======== Step2 hisat alignment ========
